@@ -1,0 +1,864 @@
+---
+title: "<center> Sharing Economy or Commercialization? Predicting Host Professionalism in Barcelona's Airbnb Market <center>"
+author: "<center> Riccardo Lecca, Masha Zinser, Karen Liu <center>"
+date: "<center> `r Sys.Date()` <center>"
+output:
+  html_document:
+    number_sections: yes
+    fig_caption: yes
+    toc: yes
+    fig_width: 7
+    fig_height: 5
+    theme: cosmo
+    highlight: tango
+    code_folding: hide
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
+                      comment = " ", error = FALSE, fig.align = 'center')
+```
+
+# Introduction
+
+The rise of peer-to-peer platforms, particularly Airbnb, has transformed the landscape of short-term rentals and the overall housing market. Initially designed for casual hosts to share their spare rooms or properties, Airbnb has evolved into a significant player in the hospitality industry,leading to a blend of professional and non-professional hosts. This has sparked considerable debate regarding its implications for local communities (Chen, W., Wei, Z. and Xie, K., 2022).
+
+Research has identified various negative effects associated with the professionalization of Airbnb hosting, such as increased rental prices and accordingly the decrease of available, affordable housing (Barron, K., Kung, E. and Proserpio, D., 2021). As a response, several cities have implemented regulatory measures aimed at mitigating these impacts although the effects remain a present issue (Garz, M. and Schneider, A., 2023). In Barcelona locals have responded to these issues by demonstrating for affordable housing, against the Airbnb tourism the city attracts. Mayor Jaume Collboni made a recent decision to ban short-term holiday rentals by 2028 which affects over 10,000 registered properties. With rents in Barcelona surging b 70% over the past decade and the broader trend of backlash against mass tourism globally, this decision highlights the complex interplay between economic interest and the need for affordable housing. 
+
+In light of these insights, this project aims to explore the complexities of host professionalism on Airbnb, with a particular focus on Barcelona. The primary objective is to analyze and compare the listings of professional versus non-professional Airbnb hosts in Barcelona. By focusing on host professionalism, defined as having five or more listings, we aim to understand how different hosting practices influence guest experiences, pricing strategies and the housing market in general. 
+
+Thus, this study aims to answer the following Research Question: To what degree do the variables from Airbnb listings influence the prediction of host professionalization?
+
+Our study seeks to provide a nuanced understanding of the dynamics at play in Barcelona's Airbnb rental landscape. We aim to identify key differences in hosting styles and assess potential implications of these differences. This includes how professional hosts might contribute to housing pressures compared to their non-professional counterparts. Ultimately, our research aims to inform regulatory frameworks that promote market transparency and support a balanced peer-to-peer platform economy. 
+
+The chosen dataset is from Inside Airbnb, a mission driven project that provides data about Airbnb's impact on residential communities. It includes 16920 observations of 75 variables concerning Airbnb listings in Barcelona. Key variables include the `host_listings_count`, `price`, `neighborhood_cleansed`, `host_is_superhost` and `number_of_reviews`. It was retrieved from Kaggle (Jiang 2023).
+
+
+Here we need to load the following R packages: 
+
+- liver: use this package for MSE 
+
+- naivebayes: use this for to implement naive bayes classification algorithm
+
+- ggplot2: used this package to visualize data in R
+
+- pROC: used to vislauize and analyse ROC curves 
+
+- psych: used for descriptive statistics, reliability analysis and factor analysis 
+
+- lubridate: used for date-time data 
+
+- dplyr: used for data transformation and manipulation 
+
+- Hmisc: used for data analysis (descriptive statistics, plotting, data imputation)
+
+- ggcorrplot: used to visualize correlation matrix
+
+- naniar: used for missing data 
+
+Here we load them as follows:
+```{r}
+library(liver)         
+library(naivebayes)
+library(ggplot2)
+library(pROC)          
+library(psych)
+library(lubridate)
+library(dplyr)
+library(Hmisc)
+library(ggcorrplot)
+library(naniar)
+```
+
+
+# Theoretical Framework
+
+## The Role of Peer-to-Peer Platforms in the Housing Market 
+
+Peer-to-peer platforms such as Airbnb have revolutionized the way individuals engage in short-term rentals and acommodations. These platforms enable property owners to rent out their spaces directly to guests. In Barcelona, Airbnb has become a dominant force in short-term rental market, contributing to significant changes in local housing dynamics (Barron et al., 2020). The increasing professionalization of Airbnb hosts, particularly those managing multiple listings, raises important questions regarding the impact of these practices on local commmunities, housing affordability and regulatory measures. Research indicates that the rise of peer-to-peer rentals can lead to increased housing costs and reduced availability of affordable housing options (Barron, Kung, & Proserpio, 2021). Consequently, understanding the dynamics of Airbnb listings and the differences between professional and non-professional hosts. 
+
+## Airbnb determinants for professionalization of Airbnb hosts
+
+### Host professionalism and its effects on rental prices
+
+The classification of Airbnb hosts into professional and non-professional categories allows us to investigate the broader impacts of the platform on housing dynamics. Professional hosts, defined as those managing five or more listings, might operate in a manner that prioritizes profit maximization and guest turnover (Abrate et. al. 2022). In contrast, non-professional hosts might engage in renting out their primary residences or spare rooms, often for supplemental income. This differentiation in hosting practices is expected to result in significant variations in pricing strategies, guest experiences, and overall market behavior (Miguel et. al 2024). Additionally, the experience offered by professional hosts, characterized by more amenities and higher service standards, may attract a different demographic of guests, further influencing market dynamics. Thus, the following hypotheses are proposed:
+
+Ha: Professional hosts in Barcelona charge higher rental prices compared to non-professional hosts.
+
+Hb: The guest experience ratings differ significantly between professional and non-professional hosts, with professional hosts receiving higher ratings.
+
+
+### Host professionalism and its effect on number of bedrooms
+
+The number of bedrooms offered in an Airbnb listing could be impacted by the hosts professionality status. Larger properties with more bedrooms are likely to attract higher nightly rates and cater to groups or families which can generate more income compared to single-bedroom units. Additionally, professional hosts may have the financial capacity to invest in larger properties. In contrast, non-professional hosts might offer their primary or secondary homes. These listings may be more personal and reflect smaller living spaces with fewer bedrooms. Thus the following hypothesis is suggested: 
+
+Hc: Professional hosts are more likely to list properties with a higher number of bedrooms compared to non-professional hosts. 
+
+### Neighborhood
+ 
+The rise of Airbnb and its professionalization of the platform has motivated investing in real estate for short-term accommodation, especially near tourist areas and city centers. This has led to issues of unfordable housing, gentrification, and overtourism in cities like Barcelona. Based on Exploratory Spatial Data Analysis techniques conducted by Deboosere et al. (2019), the study shows that “listings that belong to professional hosts are more concentrated in city centers [and near accessible transit], and influenced more by the location of tourist attractions and hotels, than of non-professional [hosts].” As a result, the following hypothesis is suggested: 
+ 
+Hd: Professional hosts have listings more densely located in city centers and tourist attractions than non-professional hosts.
+ 
+### Superhost status - Ratings and Response rates 
+
+For Airbnb hosts to be considered super hosts, many variables are taken into account, including “maintaining a 90% or higher response rate” and “maintaining a 4.8 or higher overall rating” (What’s Required to Be a Superhost - Airbnb Help Centre, n.d.). These reputation systems hold high economic value, as they are seen as symbols of trust and “are crucial prerequisites for peer-to-peer rental and sharing” (Dann, n.d.). Professional Airbnb hosts approach their hosting as a business, running it like one as well, by ensuring timely communication (Abrate et al., 2021) and offering more standardized and polished service to guests; “professional hosts invest in their properties, offering high-quality photos, detailed descriptions, and desirable amenities like Wi-Fi, parking, professional cleaning service and more” (Chang & Li, 2020). Thus, these factors contribute to a higher level of guest satisfaction and ratings. To investigate this, we propose the following hypothesis:
+
+He: Professional hosts tend to receive higher guest ratings compared to non-professional hosts due to their structured and business-oriented approach to property management 
+
+Hf: Professional hosts have higher response rates than non-professional hosts 
+
+# Data Preprocessing 
+
+Given the raw dataset, we must refine it to ensure its suitability for the algorithmic processing. The str() function gives an initial understanding of the dataset's variables and their types, allowing us to identify necessary cleaning steps. 
+```{r}
+# Loading data and preprocessing 
+airbnb = read.csv("listings.csv")
+str(airbnb)
+```
+
+## Removal of irrelevant or redundant variables 
+
+Several variables in the dataset are irrelevant to the analysis as they do not contribute meaningful information. These include variables like URLs, IDs and names. Further, a variable that was entirely empty was removed. 
+
+The following variables are removed as
+
+- they are identifiers: `listing_url`, `last_scraped`, `name`, `description`, `neighborhood_overview`, `picture_url`, `host_id`, `host_url`, `host_name`, `host_location`, `host_about`, `host_thumbnail_url`, `host_picture_url`, `host_neighbourhood`, `host_listings_count`, , `host_has_profile_pic`, `host_identity_verified`,
+
+- they provide scraping details:`calendar_updated`, `calendar_last_scraped`, `source`, `scrape_id`
+
+- they are redundant in different aspects: `review_scores_accuracy`, `review_scores_cleanliness`, `review_scores_checkin`, `review_scores_communication`, `number_of_reviews_ltm`, `review_scores_location`, `review_scores_value`;
+
+-`calculated_host_listings_count_entire_homes`, `host_total_listings_count` `calculated_host_listings_count_private_rooms`, `calculated_host_listings_count_shared_rooms`;
+
+-`has_availability`, `availability_30`, `availability_60`, `availability_90`;
+
+-`minimum_minimum_nights`, `maximum_minimum_nights`, `minimum_maximum_nights`, `maximum_maximum_nights`, `minimum_nights_avg_ntm`, `maximum_nights_avg_ntm`, `number_of_reviews_l30d`
+
+- they are descriptive in text and therefore cannot be anlayzed: `neighbourhood`, `property_type`, `amenities`, `license`, `bathrooms_text`
+
+- it consists of only missing data: `bathrooms`
+
+## Handling categorical and binary variables
+
+Several variables are categorical or binary so it needs to be formatted for the later analysis. The variable `price` is cleaned by removing dollar signs and commas, while the variables `neighbourhood`, "room_type", `host_response_time`, `host_is_superhost` and `instant_bookable` are converted to factors. For the `host_verifications` variable, a function is used to count the number of verifications for each host to make it a numerical variable that can be analyzed statistically. The target variable `business` is created from `calculated_host_listings_count` to indicate hosts which manage more than 5 listings. Other derived variables are created to support the research question, such as `verification_count` (number of host verifications).
+
+
+```{r}
+airbnb = airbnb %>% select(-listing_url, -scrape_id, -last_scraped, -source, -name, -description, -neighborhood_overview, -picture_url, -host_id, -host_url, -host_name, -host_location, -host_about, -host_thumbnail_url, -host_picture_url, -host_neighbourhood, -host_listings_count, -host_total_listings_count, -host_has_profile_pic, -host_identity_verified, -neighbourhood, -property_type, -amenities, -minimum_minimum_nights, -maximum_minimum_nights, -minimum_maximum_nights, -maximum_maximum_nights, -minimum_nights_avg_ntm, -maximum_nights_avg_ntm, -calendar_updated, -calendar_last_scraped, -review_scores_accuracy, -review_scores_cleanliness, -review_scores_checkin, -review_scores_communication, -number_of_reviews_ltm, -review_scores_location, -review_scores_value, -license, -calculated_host_listings_count_entire_homes, -calculated_host_listings_count_private_rooms, -calculated_host_listings_count_shared_rooms, -bathrooms_text, -bathrooms, -has_availability, -availability_30, -availability_60, -availability_90, -number_of_reviews_l30d)
+airbnb$price <- gsub("\\$", "", airbnb$price)
+airbnb$price <- as.numeric(gsub(",", "", airbnb$price))
+airbnb$neighbourhood_cleansed = as.factor(airbnb$neighbourhood_cleansed)
+airbnb$neighbourhood_group_cleansed = as.factor(airbnb$neighbourhood_group_cleansed)
+airbnb$room_type = as.factor(airbnb$room_type)
+airbnb$host_response_time[airbnb$host_response_time == "N/A" | airbnb$host_response_time == ""] = NA
+airbnb$host_response_time = as.factor(airbnb$host_response_time)
+airbnb$host_is_superhost = ifelse(airbnb$host_is_superhost == "t", TRUE, ifelse(airbnb$host_is_superhost == "f", FALSE, NA))
+airbnb$host_is_superhost = as.factor(airbnb$host_is_superhost)
+airbnb$instant_bookable = ifelse(airbnb$instant_bookable == "t", TRUE, ifelse(airbnb$instant_bookable == "f", FALSE, NA))
+```
+
+
+
+```{r}
+count_elements <- function(x) {
+  # Remove the square brackets and split by commas
+  elements <- strsplit(gsub("\\[|\\]", "", x), ",")
+  # Count the number of elements after splitting
+  sapply(elements, length)}
+
+airbnb$verification_count = count_elements(airbnb$host_verifications)
+airbnb$first_review <- as.Date(airbnb$first_review)
+airbnb$host_since <- as.Date(airbnb$host_since)
+airbnb$last_review <- as.Date(airbnb$last_review)
+
+airbnb$host_response_rate <- as.numeric(gsub("%", "", airbnb$host_response_rate)) 
+airbnb$host_acceptance_rate <- as.numeric(gsub("%", "", airbnb$host_acceptance_rate))
+airbnb$business <- ifelse(airbnb$calculated_host_listings_count > 5, TRUE, FALSE)
+```
+
+## Handling outliers
+
+We use the `summary()` to identify variables that may contain outliers 
+```{r}
+summary(airbnb)
+```
+Outliers in the `price`, `bedrooms` and `beds` variables are identified and replaced with NA. This is to not let the outliers skew analysis results and ensure the data reflects typical values more accurately.
+
+```{r}
+ggplot(data = airbnb, aes(x = price)) +
+     geom_histogram(bins = 30, color = "blue", fill = "lightblue") + coord_cartesian(ylim = c(0, 100))
+ggplot(data = airbnb, aes(x = price)) + geom_histogram(bins = 150, color = "blue", fill = "lightblue") + coord_cartesian(xlim = c(0, 5000)) 
+
+ggplot(data = airbnb, aes(x = price)) + geom_histogram(bins = 150, color = "blue", fill = "lightblue") + coord_cartesian(xlim = c(0, 10000), ylim = c(0, 1000)) 
+
+airbnb = mutate(airbnb, price = ifelse(price == 0 |price > 3500, NA, price))
+
+ggplot(data = airbnb, aes(x = bedrooms)) + geom_histogram(bins = 30, color = "blue", fill = "lightblue") + coord_cartesian(ylim = c(0, 5))
+ggplot(data = airbnb, aes(x = beds)) + geom_histogram(bins = 30, color = "blue", fill = "lightblue") + coord_cartesian(ylim = c(0, 5))
+
+airbnb = mutate(airbnb, beds = ifelse(beds > 22, NA, beds))
+airbnb = mutate(airbnb, beds = ifelse(bedrooms > 15, NA, bedrooms))
+airbnb = mutate(airbnb, accommodates = ifelse(accommodates == 0, NA, accommodates)) 
+airbnb = mutate(airbnb, review_scores_rating = ifelse(review_scores_rating == 0, NA, review_scores_rating)) 
+
+```
+## Imputing and filtering inactive listings 
+
+The `gg_miss_var()` function from the naniar package is used to see which variables contain NA values. We consequently proceed to impute these variables.
+
+```{r}
+gg_miss_var(airbnb, show_pct = TRUE )
+```
+
+Additionally, to focus on relevant and active listings, properties that are no longer active are removed from the dataset. This removal only regards listings with no price available and with either their last review before 2022 or with no availability ever in the next year. We also excluded listings with the variable `minimum_nights` higher than 3 months as a prior analysis of the dataset and the linked online listings revealed it is set so high so that users cannot book them, without advertisers having to remove the listing from the platform. This step ensures that the analysis is as relevant as possible. 
+
+```{r}
+# Imputing
+airbnb$year_last_review = impute(airbnb$year_last_review, 'random') 
+airbnb$year_last_review <- year(airbnb$last_review)
+
+# Removing inactive listings
+airbnb = airbnb[!(airbnb$year_last_review != 2022 & is.na(airbnb$price)), ]
+airbnb = airbnb[!(airbnb$availability_365 == 0 & is.na(airbnb$price)), ]
+airbnb = airbnb[!(airbnb$minimum_nights > 92), ]
+airbnb = airbnb[!is.na(airbnb$id), ]
+
+airbnb$accommodates = impute(airbnb$accommodates, 'random')
+airbnb$reviews_per_month = impute(airbnb$reviews_per_month, 'random')
+airbnb$review_scores_rating = impute(airbnb$review_scores_rating, 'random')
+airbnb$last_review = impute(airbnb$last_review, 'random') 
+airbnb$year_last_review = year(airbnb$last_review)
+airbnb$first_review = impute(airbnb$first_review, 'random')
+airbnb$host_response_time = impute(airbnb$host_response_time, 'random')
+airbnb$host_response_rate = impute(airbnb$host_response_rate, 'random')
+airbnb$host_acceptance_rate = impute(airbnb$host_acceptance_rate, 'random')
+airbnb$host_is_superhost = impute(airbnb$host_is_superhost, 'random')
+airbnb$bedrooms = impute(airbnb$bedrooms, 'random') 
+airbnb$beds = impute(airbnb$beds, 'random') 
+airbnb$host_since = impute(airbnb$host_since, 'random') 
+airbnb$price = impute(airbnb$price, 'random') 
+airbnb$host_response_time = impute(airbnb$host_response_time, 'random')
+airbnb$year_host_since = (year(airbnb$host_since))
+airbnb$year_first_review = (year(airbnb$first_review))
+```
+
+Finally, we remove the variables `host_verifications`, `first_review`, `last_review`, `calculated_host_listings_count`, `year_last_review`, `host_since` used to calculate other variables and `id` as it is an identifier.
+```{r}
+airbnb <- airbnb %>% select(-host_verifications, -id, -first_review, -last_review, -calculated_host_listings_count, -year_last_review, -host_since)
+```
+
+```{r}
+str(airbnb)
+```
+In the cleaned dataset we have:
+
+Binary variables: `host_is_superhost`, `instant_bookable`, `business`
+Nominal variables: `neighbourhood_cleansed`, `neighbourhood_group_cleansed`, `room_type`
+Ordinal variables: `year_host_since`, `year_first_review`, `host_response_time`
+Numerical variables: `host_response_rate`, `host_acceptance_rate`, `latitude`, `longitude`, `accommodates`, `bedrooms`, `price`, `minimum_nights`, `availability_365`, `number_of_reviews`, `number_of_reviews_l30d`, `review_scores_rating`, `reviews_per_month`.
+
+# Exploratory Data Analysis 
+
+## Investigating the target variable
+
+The target variable is `business` and here we report its summary.
+
+```{r}
+summary(airbnb$business)
+```
+
+Moreover, we create a bar plot to visualize the distributions.
+
+```{r}
+ggplot(data = airbnb) + 
+    geom_bar(aes(x = business), fill = c("#df546b", "#2297e6")) +
+    labs(title = "Bar plot for the target variable 'business'")  
+```
+
+```{r}
+prop.table(table(airbnb$business))
+```
+
+Professional hosts manage 44% of the listings in the dataset.
+
+## Investigating binary variables
+We report bar plots for the binary variables `host_is_superhost` and `instant_bookable`:
+
+<h3> Variable `host_is_superhost` </h3>
+```{r}
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = host_is_superhost, fill = business)) +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = host_is_superhost, fill = business), position = "fill") +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+The bar plot indicates that there is an important difference between the two groups for the prediction of the target variable.
+
+<h3> Variable `instant_bookable` </h3>
+```{r}
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = instant_bookable, fill = business)) +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = instant_bookable, fill = business), position = "fill") +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+Similarly, the graph shows evidence supporting that the variable `instant_bookable` is important for the prediction of `business` since it is more common for professional hosts to allow users to instantly book the accomodation. 
+
+
+## Investigating cateogorical variables
+
+<h3> Variable `neighbourhood_group_cleansed` </h3>
+The variable `neighbourhood_group_cleansed` reports in which of 10 Barcelona city districts a listing is located in.
+```{r}
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = neighbourhood_group_cleansed, fill = business)) +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = neighbourhood_group_cleansed, fill = business), position = "fill") +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+   
+```
+The bar plot shows that there is an important difference between the rates of professional hosts in the different districts. For instance, Eixample and Ciutat Vella, the districts with more offering since located in the historical center have a higher rate of professional hosts than the areas of Nou Barri and Sant Andreu, located in the outskirts of the city.
+
+
+<h3> Variable `neighbourhood_cleansed` </h3>
+```{r fig.width=7, fig.height=15}
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = neighbourhood_cleansed, fill = business)) +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + coord_flip()
+
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = neighbourhood_cleansed, fill = business), position = "fill") +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + coord_flip()
+```
+This visualization is an in depth look compared to that of the variable `neighbourhood_group_cleansed`. For instance, the neighborhoods with the most listings such as la Dreta de l'Eixample, el Raval and el Barri Gotic all have a high presence of professional hosts. 
+
+<h3> Variable `room_type` </h3>
+```{r}
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = room_type, fill = business)) +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = room_type, fill = business), position = "fill") +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+Although both the values "Hotel room" and "Shared room" are extremely low in count, the variable `room_type`, it appears to be important for the prediction of the target variable `business` as we can see from the difference between the business rate in "Private room" and "Entire home/apt".
+
+## Investigating ordinal variables
+
+<h3> Variable `host_response_time` </h3>
+```{r}
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = host_response_time, fill = business)) +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = host_response_time, fill = business), position = "fill") +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+Since the bar plots are not able to show graphical evidence for the importance of the variable in the prediction of `business`, we run a chi-squared test to determine if their relation is statistically significant.
+
+$$ \bigg\{ \begin{matrix} H_0: \pi_{fewdays, \ T} = \pi_{withinday, \ T} = \pi_{withinhours, \ T} = \pi_{withinhour, \ T}\\ H_a: At \ least \ one \ of \ the \ claims \ in \ H_0 \ is \ wrong. \end{matrix} $$
+```{r}
+chisq.test(table(airbnb$business, airbnb$host_response_time))
+```
+As the p-value = 2.098e-14 we can reject the null hypothesis and consider the variable as important.
+
+<h3> Variable `year_first_review` </h3>
+```{r}
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = year_first_review, fill = business)) +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = year_first_review, fill = business), position = "fill") +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+These bar plots seem to indicate that the later the Airbnb received its first review (date which is supposedly close to when it first started to accomodate people) the more likely it is that the Airbnb is run by a business. In order to be sure of this, we run a chi-squared test. 
+
+
+$$ \bigg\{ \begin{matrix} H_0: \pi_{2010, \ T} = \pi_{2011, \ T} = \pi_{2012, \ T} = \pi_{2013, \ T}= \pi_{2014, \ T}= \pi_{2015, \ T}= \pi_{2016, \ T}= \pi_{2017, \ T}= \pi_{2018, \ T}= \pi_{2018, \ T}= \pi_{2020, \ T}= \pi_{2021, \ T}= \pi_{2022, \ T}\\ H_a: At \ least \ one \ of \ the \ claims \ in \ H_0 \ is \ wrong. \end{matrix} $$
+```{r}
+chisq.test(table(airbnb$business, airbnb$year_first_review))
+```
+The test allows us to reject the null hypothesis as the p-value < 2.2e-16 and confirms the relation between the target variable and `year_first_review`
+
+<h3> Variable `year_host_since` </h3>
+```{r}
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = year_host_since, fill = business)) +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = airbnb) + 
+  geom_bar(aes(x = year_host_since, fill = business), position = "fill") +
+  scale_fill_manual(values = c("#df546b", "#2297e6")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+The bar plot indicates that the variable `year_host_since` has higher rates of professional hosts between 2009 and 2012, and in 2020, thus revealing a relationship between the two variables.
+
+## Investigate numerical variables
+In the following, we investigate the numerical variables in the Airbnb dataset between business and non-business listings. Firstly, a correlation matrix is used to visualize correlations of the variables. Since no perfect correlations were found, none of the variables have to be removed. We can see a high positive correlation between the variables "accommodates" and "bedrooms" indicating, which makes sense as a listing with more bedrooms accomodates more guests. Further a negative correlation between price and minimum nights can be seen, which indicates listings with longer minimum stays generally charge lower prices per night. Conversly, listings with higher nightly prices seem to allow shorter stays.
+```{r}
+
+
+variable_list = c("host_response_rate", "host_acceptance_rate", "latitude", "longitude", "accommodates", "bedrooms", "price", "minimum_nights", "availability_365", "number_of_reviews", "review_scores_rating", "reviews_per_month", "verification_count")
+
+
+cor_matrix = cor(airbnb[, variable_list])
+
+ggcorrplot(cor_matrix, type = "lower", lab = TRUE, lab_size = 3)
+```
+
+<h3> Variable `price` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = price), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = price, fill = business), alpha = 0.3)
+```
+
+We further investigate the difference in the variable "price" for business and non-business listings. The boxplot reflects accomodations of professional hosts to be higher on average than listings from non-professional hosts. The non-professional host prices are seen to variate more but have a lower median and box.   
+
+The density plot also reflects this. The the business curve is spread wider while the non-business curve is more concentrate and has a higher peak. In general the business curve is further to the right, indicating a higher average price. 
+
+This shows professional hosts to have higher average prices on their listings, which could be due to them being more profit-oriented or having access to more valuable properties.
+
+<h3> Variable `availability_365` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = availability_365), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = availability_365, fill = business), alpha = 0.3)
+```
+
+Investigating the variable `availability_365`, it can be seen that listings of professional hosts are available during more times of the year. While the non-professional mean lays around 110, the mean for the professional listings is closer to 225, almost double the amount. This is also represented by the boxes quartiles and distribution. 
+
+The same gets reflected in the density plot, where business and non-business accommodations are seen to peek at different ends of the spectrum. Both also have small peaks on the other side but the non-profit accommodation graph has its' main peak at around 5 while the profit accommodation graph peaks around 330.
+
+This reflects a big difference in availability between profit and non-profit hosts listings. This could be due to non-professional hosts partly living in their accommodations or needing more time in between the stays to clean out the space. 
+
+<h3> Variable `accommodates` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = accommodates), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = accommodates, fill = business), alpha = 0.3)
+```
+
+Investigating the variable `accommodates` reveals that business listings tend to accommodate a higher number of guests on average than non-business listings. The median number of guests for business listings is higher and the interquartile range indicates business listings have a wider spread in their guest capacity. Non-business listings on the other hand show lower capacity with a tighter range around their median. 
+
+The density plot further illustrates this difference. The curve for business listings is shifted to the right, indicating that these properties are more likely to accomodate larger groups. The peak for business listings is lower but more spread out, again inidcating greater variability in how many people they can host. In contrast, non-business listings have a higher peak but are more concentrated around lower guest capacities. 
+
+These findings indicate that professional hosts generally offer a larger range of accommodations with a higher variability of how many guests can be accommodated. On average they are also seen to offer accommodations with more capacity, indicating bigger space. This could also be the reason for the difference in price that was detected earlier in the analysis. 
+
+<h3> Variable `review_scores_rating` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = review_scores_rating), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = review_scores_rating, fill = business), alpha = 0.3)
+```
+
+The variable "review_scores_rating" reflects non-business Airbnb listings to have higher ratings than business listings on average. The boxplot illustrates this finding as the median is higher and the interquartile range is narrower, indicating that non-business listings generally receive consistently positive reviews with fewer extreme outliers. Business listings on the other hand show more variability in review scores. The median is lower and the IQR wider.
+
+The density plot confirms this pattern. The curve for non-business listings has a higher peak and is more concentrated around higher ratings, implying individual hosts are more likely to achieve high guest satisfaction.
+
+These findings suggest that non-business accommodations may provide more personalized, unique experiences that lead to higher guest satisfaction. In contrast, business listings, which might offer more standardized services, show a wider spread of ratings, possibly due to varying quality across a large number of managed properties. 
+$$
+\bigg\{
+\begin{matrix}
+    H_0: \mu_1 =    \mu_2   \\
+    H_a: \mu_1 \neq \mu_2 
+\end{matrix}
+$$
+```{r}
+t.test(review_scores_rating ~ business, data = airbnb)
+```
+To verify our assumption of the statistical significance of the variable we run a T-test that compares the mean of the variable between business and non-business listings. As the p-value is lower than 0.05 we reject H0 and conclude that "review_scores_rating" does deviate between the two significantly. 
+
+
+<h3> Variable `reviews_per_month` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = reviews_per_month), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = reviews_per_month, fill = business), alpha = 0.3)
+```
+The analysis of the "reviews_per_month" variable reveals no clear visible trend. The differences are subtle even though the boxplot indicates that non-business listings have slightly hgiher average reviews per month. Both categories display small and dense boxes, suggesting that review counts for both listings are clustered closely around their respective medians. 
+
+The density plot emphasizes this obervation. The distribution for non-business listings peaks towards the far left, same as the the business listings, even though it has a slightly wider spread. 
+$$
+\bigg\{
+\begin{matrix}
+    H_0: \mu_1 =    \mu_2   \\
+    H_a: \mu_1 \neq \mu_2 
+\end{matrix}
+$$
+```{r}
+t.test(reviews_per_month ~ business, data = airbnb)
+```
+The T-test revealed the difference to be significant and reflected a higher mean in the non-business reviews. The slight increase in non-business listings could stem from similar reasons to the better review ratings, such as authentic and personal guest experiences.
+
+<h3> Variable `verification_count` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = verification_count), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = verification_count, fill = business), alpha = 0.3)
+```
+Although the boxplot shows that the averages for the two groups are the same, the density chart shows that listings whose host has a verification count of 3 has a higher chance of being managed by a professional host, while it is the opposite for those with a verification count of 1 and 2.
+
+
+<h3> Variable `beds` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = beds), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = beds, fill = business), alpha = 0.3)
+```
+The analysis of the "beds" variable highlights a noticable difference between business and non business Airbnb listings. The boxplot reveals that business listings have a higher average number of beds compared to their non-business counterparts. Further the box is wider, representing a bigger variability in listings. 
+
+The density plot further supports these findings. The curve for business listings extends further to the right, indicating a higher likelihood of listings with multiple beds. Conversely, the density for non-business listings peaks at lower bed counts, reflecting that these listings are generally designed to accommodate fewer guests.
+
+Overall, these findings align with the "accommodates" variable. Business-listings are more likely to have more beds and have a higher variability in their offers. 
+
+<h3> Variable `host_response_time` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = host_response_rate), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = host_response_rate, fill = business), alpha = 0.3)
+```
+The boxplot shows that listings with professional hosts have a lower mean of response rate, which also appears in the density graph.
+We run a T-test to verify the significance of this relation.
+$$
+\bigg\{
+\begin{matrix}
+    H_0: \mu_1 =    \mu_2   \\
+    H_a: \mu_1 \neq \mu_2 
+\end{matrix}
+$$
+
+```{r}
+t.test(host_response_rate ~ business, data = airbnb)
+```
+Since the T-test has a p-value of 3.16e-08 the null hypothesis can be rejected and the variable be considered important.
+
+
+<h3> Variable `host_acceptance_rate` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = host_acceptance_rate), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = host_acceptance_rate, fill = business), alpha = 0.3)
+```
+Despite the fact that the boxplots comparing the two groups have different IQR, but a highly similar mean, the density graph suggests that 
+
+$$
+\bigg\{
+\begin{matrix}
+    H_0: \mu_1 =    \mu_2   \\
+    H_a: \mu_1 \neq \mu_2 
+\end{matrix}
+$$
+
+```{r}
+t.test(host_acceptance_rate ~ business, data = airbnb)
+```
+To verify the significance of the variable `host_acceptance_rate` in predicting `business`, we use a T-test which allows us to reject the null hypothesis and consider the variable as important, since its p-value is lower than α = 0.05. 
+
+
+<h3> Variable `number_of_reviews` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = number_of_reviews), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = number_of_reviews, fill = business), alpha = 0.3)
+```
+The difference between the two groups seems to be slight considering both the boxplot and the density graph. Consequently, we use a T-test to verify if there is a significant difference between the two.
+$$
+\bigg\{
+\begin{matrix}
+    H_0: \mu_1 =    \mu_2   \\
+    H_a: \mu_1 \neq \mu_2 
+\end{matrix}
+$$
+
+```{r}
+t.test(number_of_reviews ~ business, data = airbnb)
+```
+Since the t-test shows a p-value < 2.2e-16, we can reject the null hypothesis and use the variable `number_of_reviews` to predict the target variable.
+
+<h3> Variables `latitude` and `latitude`  </h3>
+```{r}
+ggplot(airbnb, aes(x = longitude, y = latitude, color = business)) +
+  geom_point(alpha = 0.7) +
+  theme_minimal() +
+  theme(legend.position = "right")
+```
+Plotting the two variables together allows us to visualize the distribution of listings with professional hosts through different coordinates. In fact, we can identify clusters in the top and bottom left of listings with mostly professional hosts. To verify whether these variables are important for the prediction of the target variable we run a T-test for each.
+
+```{r}
+t.test(longitude ~ business, data = airbnb)
+t.test(latitude ~ business, data = airbnb)
+```
+The T-tests for `longitude` and `latitude` have a p-value under α = 0.05. Thus, they can be use to build a model to predict `business`
+
+<h3> Variable `minimum_nights` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = minimum_nights), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = minimum_nights, fill = business), alpha = 0.3) + coord_cartesian(xlim = c(0, 50)) 
+```
+$$
+\bigg\{
+\begin{matrix}
+    H_0: \mu_1 =    \mu_2   \\
+    H_a: \mu_1 \neq \mu_2 
+\end{matrix}
+$$
+```{r}
+t.test(minimum_nights ~ business, data = airbnb)
+```
+These plots indicate that the two groups have little difference when it comes to the variable `minimum_nights` and the T-test resulting in a p-value of 0.1231 confirms this.
+
+<h3> Variable `maximum_nights` </h3>
+```{r}
+ggplot(data = airbnb) +
+    geom_boxplot(aes(x = business, y = maximum_nights), fill = c(2, 4))
+ggplot(data = airbnb) +
+  geom_density(aes(x = maximum_nights, fill = business), alpha = 0.3) + coord_cartesian(xlim = c(0, 50)) 
+```
+The variable `maximum_nights` has a higher mean for listings with professional hosts, compared to the others. 
+$$
+\bigg\{
+\begin{matrix}
+    H_0: \mu_1 =    \mu_2   \\
+    H_a: \mu_1 \neq \mu_2 
+\end{matrix}
+$$
+```{r}
+t.test(maximum_nights ~ business, data = airbnb)
+```
+Running a T-test to verify the significance of `maximum_nights` for the prediction of `business` results in a p-value < 2.2e-16, confirming the variable's significance.
+
+# Data Preparation for Modeling
+
+In order to apply the kNN algorithm, we create dummy variables for n-1 levels of `room_type`, `neighbourhood_group_cleansed` and `neighbourhood_cleansed`
+```{r}
+airbnb$dummy_entire_home <- ifelse(airbnb$room_type == "Entire home/apt", 1, 0)
+airbnb$dummy_hotel_room <- ifelse(airbnb$room_type == "Hotel room", 1, 0)
+airbnb$dummy_private_room <- ifelse(airbnb$room_type == "Private room", 1, 0)
+airbnb$neighgroup1 <- ifelse(airbnb$neighbourhood_group_cleansed == "Ciutat Vella", 1, 0)
+airbnb$neighgroup2 <- ifelse(airbnb$neighbourhood_group_cleansed == "Eixample", 1, 0)
+airbnb$neighgroup3 <- ifelse(airbnb$neighbourhood_group_cleansed == "Gràcia", 1, 0)
+airbnb$neighgroup4 <- ifelse(airbnb$neighbourhood_group_cleansed == "Horta-Guinardó", 1, 0)
+airbnb$neighgroup5 <- ifelse(airbnb$neighbourhood_group_cleansed == "Les Corts", 1, 0)
+airbnb$neighgroup6 <- ifelse(airbnb$neighbourhood_group_cleansed == "Nou Barris", 1, 0)
+airbnb$neighgroup7 <- ifelse(airbnb$neighbourhood_group_cleansed == "Sant Andreu", 1, 0)
+airbnb$neighgroup8 <- ifelse(airbnb$neighbourhood_group_cleansed == "Sant Martí", 1, 0)
+airbnb$neighgroup9 <- ifelse(airbnb$neighbourhood_group_cleansed == "Sarrià-Sant Gervasi", 1, 0)
+```
+
+```{r}
+# Create a vector of neighborhood names
+#neighborhoods <- c( "Baró de Viver", "Can Baró", "Can Peguera", "Canyelles", "Ciutat Meridiana", "Diagonal Mar i el Front Marítim del Poblenou", "el Baix Guinardó", "el Barri Gòtic", "el Besòs i el Maresme", "el Bon Pastor", "el Camp d'en Grassot i Gràcia Nova", "el Camp de l'Arpa del Clot", "el Carmel", "el Clot", "el Coll", "el Congrés i els Indians", "el Fort Pienc", "el Guinardó", "el Parc i la Llacuna del Poblenou", "el Poble Sec", "el Poblenou", "el Putxet i el Farró", "el Raval", "el Turó de la Peira", "Horta", "Hostafrancs", "l'Antiga Esquerra de l'Eixample", "la Barceloneta", "la Bordeta", "la Clota", "la Dreta de l'Eixample", "la Font d'en Fargues", "la Font de la Guatlla", "la Guineueta", "la Marina de Port", "la Marina del Prat Vermell", "la Maternitat i Sant Ramon", "la Nova Esquerra de l'Eixample", "la Prosperitat", "la Sagrada Família", "la Sagrera", "la Salut", "la Teixonera", "la Trinitat Nova", "la Trinitat Vella", "la Vall d'Hebron", "la Verneda i la Pau", "la Vila de Gràcia", "la Vila Olímpica del Poblenou", "les Corts", "les Roquetes", "les Tres Torres", "Montbau", "Navas", "Pedralbes", "Porta", "Provençals del Poblenou", "Sant Andreu", "Sant Antoni", "Sant Genís dels Agudells", "Sant Gervasi - Galvany", "Sant Gervasi - la Bonanova", "Sant Martí de Provençals", "Sant Pere, Santa Caterina i la Ribera", "Sants", "Sants - Badal", "Sarrià", "Torre Baró", "Vallbona", "Vallcarca i els Penitents", "Vallvidrera, el Tibidabo i les Planes", "Verdun", "Vilapicina i la Torre Llobeta" )
+
+# Create dummy variables for each neighborhood without spaces in the variable names
+#for (i in seq_along(neighborhoods)) {
+#  neigh <- neighborhoods[i]
+  # Use the index to create a variable name
+#  airbnb[[paste0("neigh_", i)]] <- ifelse(airbnb$neighbourhood_cleansed == neigh, 1, 0)
+#}
+```
+
+Additionally, we randomly partition the dataset into a training set (80%) and a testing set (20%). In doing so we use a seed to ensure the replicability of the results.
+```{r}
+set.seed(8) 
+
+data_sets = partition(data = airbnb, prob = c(0.8, 0.2))
+
+train_set = data_sets$part1
+test_set  = data_sets$part2
+
+actual_test  = test_set$business
+```
+
+\[
+\bigg\{
+\begin{matrix}
+          H_0:  \pi_{business(yes),\ train}   =  \pi_{business(yes),\ test} \\
+          H_a:  \pi_{business(yes),\ train} \neq \pi_{business(yes),\ test}
+\end{matrix}
+\]
+
+```{r}
+x1 = sum(train_set$business == TRUE)
+x2 = sum(test_set $business == TRUE)
+
+n1 = nrow(train_set)
+n2 = nrow(test_set)
+
+prop.test(x = c(x1, x2), n = c(n1, n2))
+```
+$H_0$ is not rejected as the p-value is 0.9647, thus higher than α = 0.05. Therefore, the difference between the proportions of listings whose host is a business in the training and testing datasets is not significantly different so we can proceed with data modelling.
+
+# Modeling 
+Based on the results of the Exploratory Data Analysis, 20 of out 23 predictors in the cleaned dataset have been identified as influencing the target variable business: `room_type`, `price`, `instant_bookable`, `reviews_per_month`, `host_response_time`, `number_of_reviews`, `neighbourhood_cleansed`, `host_is_superhost`, `year_first_review`, `year_host_since`, `neighbourhood_group_cleansed`, `accommodates`, `availability_365`, `review_scores_rating`, `host_response_rate`, `host_acceptance_rate`, `beds`, `maximum_nights`,`verification_count`, and `latitude`. Using the partitioned dataset, we will apply different machine learning algorithms with these selected predictors to assess their effectiveness in predicting host professionalization in Airbnb.
+
+
+## Logistic Regression
+
+Using logistic regression, we aim to classify whether an Airbnb listing is managed by a professional host or not. To do so we will use the predictors identified in the EDA.
+
+```{r}
+formula = business ~ room_type + price + instant_bookable + reviews_per_month + host_response_time + number_of_reviews + host_is_superhost + year_first_review + year_host_since + neighbourhood_group_cleansed + accommodates +  availability_365 + review_scores_rating + host_response_rate + host_acceptance_rate + beds + maximum_nights + verification_count + latitude 
+regress = glm(formula, data = train_set, family = binomial)
+```
+
+We use `summary()`to view a summary of the regression results
+```{r}
+summary(regress)
+```
+
+
+## Verifying Regression Model Assumptions
+```{r}
+plot(regress)
+```
+
+Normality:
+Observing the Q-Q plot, it shows a mostly diagonal line which suggests approximate normality. Slight deviations are seen at higher quantiles. 
+
+Linearity:
+Observing the Residual vs. Fitted Plot, it reveals a rather curved plot than randomly spread around zero which suggests that the linear relationship might not hold well. This indicates potential non-linearity, meaning some predictors may not have a linear relationship with the response variable. 
+
+Independence:
+When looking at the residuals vs fitted plot and the residuals vs leverage, we do see trends and clustering in some of the plots. This could indicate that some issues with independence are present. 
+
+Variance:
+The residuals vs leverage plot shows a trend towards 0 which could indicate heteroscedasticity. This is also confirmed by the scale-location plot that shows patterns and not a random spread of points or a horizontal line.  
+
+## Naive Bayes Classification
+
+We apply the naive Bayes classifier using the predictors and the target variable `business` through the following formula, which does not include `neighbourhood_group_cleansed` as the algorithm requires predictors to be independent:
+```{r}
+formula = business ~ room_type + price + instant_bookable + host_response_time + number_of_reviews + host_is_superhost + year_first_review + year_host_since + neighbourhood_group_cleansed + accommodates +  availability_365 + review_scores_rating + host_response_rate + host_acceptance_rate + beds + maximum_nights + verification_count + latitude + longitude + reviews_per_month 
+```
+
+We use the `naive_bayes()` command from the R package naivebayes to apply the algorithm to the training set
+```{r}
+naive_bayes = naive_bayes(formula, data = train_set)
+naive_bayes
+```
+Here we can observe probability tables for each variable.
+
+To get a summary of the model, we use the `summary()` function:
+```{r}
+summary(naive_bayes)
+```
+The summary reports that the model was trained through 13461 samples, each with 20  features, the two binary variables `host_is_superhost` and `instant_bookable` using the Bernoulli distribution, the numerical variables with the Gaussian distribution and the categorical variables, like `neighbourhood_cleansed` with a Categorical distribution. 
+
+## k-Nearest Neighbor Algorithm
+
+In order to apply the k-Nearest Neighbor algorithm, we have created dummy variables for the categorical variables `neighbourhood_group_cleansed`,`neighbourhood_cleansed`, and `room_type`, and added them in the following formula:
+```{r}
+formula_knn = business ~ price + availability_365 + accommodates + review_scores_rating + instant_bookable + host_response_time + number_of_reviews + host_is_superhost + year_first_review + year_host_since + host_response_rate + host_acceptance_rate + beds + maximum_nights + verification_count + dummy_entire_home + dummy_hotel_room + dummy_private_room + neighgroup1 + latitude + longitude + reviews_per_month + neighgroup2 +neighgroup3 + neighgroup4 + neighgroup4 +  neighgroup5 + neighgroup6 +  neighgroup7 + neighgroup8+  neighgroup9 
+```
+
+To find the optimal value of k based on Error Rate, we run kNN for the training set and plot the Error Rates for different values of k.
+```{r}
+kNN.plot(formula_knn, train = train_set, test = test_set, transform = "minmax", k.max = 30, set.seed = 7) 
+```
+From the plot, we can observe that the optimal value of k is 1 as it has the lowest Error Rate.
+
+Through the `kNN()` function from the R package liver, we calculate the probabilities for classification predictions in the testing set.
+```{r}
+prob_knn = kNN(formula_knn, train = train_set, test = test_set, transform = "minmax", k = 1, type = "prob")[, 1]
+```
+
+# Model Evaluation 
+
+Before deploying, ensure the models align with the project's goals.
+
+-   Assess the models developed during the modeling phase.
+-   Determine if the model meets the phase 1 objectives.
+-   Verify that no significant aspect of the research or business
+    challenge has been overlooked.
+-   Decide on the data mining results' applicability.
+
+Here we report confusion matrices for each model through the `conf.mat.plot()` function:
+```{r}
+prob_regression_airbnb = predict(regress, test_set, type = "response")
+prob_regression_airbnb = 1 - prob_regression_airbnb
+conf.mat.plot(prob_regression_airbnb, actual_test, cutoff = 0.5, reference = FALSE, main = "Regression")
+prob_naive_bayes = predict(naive_bayes, test_set, type = "prob")[, 1]
+conf.mat.plot(prob_naive_bayes, actual_test, cutoff = 0.5, reference = FALSE, main = "Naive Bayes")
+conf.mat.plot(prob_knn, actual_test, cutoff = 0.5, reference = FALSE, main = "kNN")
+```
+Considering the three confusion matrices, the kNN algorithm seems  to have a better performance with only `r conf.mat(prob_knn, actual_test, cutoff = 0.5, reference = FALSE)[1, 2] + conf.mat(prob_knn, actual_test, cutoff = 0.5, reference = FALSE)[2, 1]` wrong predictions, while the naive Bayes algorithm has `r conf.mat(prob_naive_bayes, actual_test, cutoff = 0.5, reference = FALSE)[1, 2] + conf.mat(prob_naive_bayes, actual_test, cutoff = 0.5, reference = FALSE)[2, 1]` and the logistic regression counts `r conf.mat(prob_regression_airbnb, actual_test, cutoff = 0.5, reference = FALSE)[1, 2] + conf.mat(prob_regression_airbnb, actual_test, cutoff = 0.5, reference = FALSE)[2, 1]` wrong predictions
+
+
+```{r}
+roc_naive_bayes = roc(actual_test, prob_naive_bayes)
+roc_regression = roc(actual_test, prob_regression_airbnb)
+roc_knn = roc(actual_test, prob_knn)
+
+ggroc(list(roc_naive_bayes, roc_knn, roc_regression), size = 0.8) + 
+    theme_minimal() + ggtitle("ROC plots with their AUC values") +
+  scale_color_manual(values = 1:3, 
+    labels = c(paste("Linear Regression; AUC=", round(auc(roc_regression), 3)),
+               paste("kNN; AUC=", round(auc(roc_knn), 3)),
+               paste("Bayes; AUC=", round(auc(roc_naive_bayes), 3)))) +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = c(.7, .3), text = element_text(size = 17))
+```
+The ROC plot shows that the algorithm that perfoms worst is the Naive Bayes classifier. On the other hand, the kNN model and the logistic regression model have close AUCs of respectively `r round(auc(roc_knn), 3)` and `r round(auc(roc_regression), 3)`. However, since the kNN model has a better performance considering confusion matrices and we could not verify the assumptions of the regression model, the kNN model emerges as the best out of the three for this dataset.
+
+# Conclusions 
+
+With the current housing crisis and over-tourism being protested by locals in Barcelona, we wanted to investigate the role Airbnb plays, specifically how its transition into a professionalized business has impacted the availability of affordable housing. This led us to the research question: To what degree do the variables from Airbnb listings influence the prediction of host professionalization? To answer this question, we first investigated professionalized hosts' rise and impact on short-term rentals. We also investigated what actions have already been taken against Airbnb by the city of Barcelona. Then we discussed potential determinants that could help identify professional hosts, i.e, those who run their Airbnb listings as a business. These determinants included price, number of bedrooms, neighborhood and Superhost status, which included ratings and response rates. 
+
+The model that was created in this study is highly valuable for users to improve transparency in their use of Airbnb, but also policymakers in order to make informed decisions about what further steps to take. As discussed before, the city of Barcelona has already implemented decisions to ban short-term holiday rental by 2028, but through this analysis it can provide a large and clear scope of the problem and the role Airbnb plays, and apply targeted regulations instead. By understanding where and how professional hosts operate and being able to identify them, the city can craft more targeted regulations to ensure that Airbnb does not excessively disrupt local housing markets. For example, cities like Barcelona may impose restrictions on the number of properties a single host can manage, implement mandatory registration, or set rental caps in high-demand areas to preserve residential communities.
+
+Additionally, it can help indicate which neighborhoods are the most impacted through the analysis of the neighborhood variable. It could be used to map the concentration of Airbnbs to see which areas are most affected by the issue. If data shows that professional hosting is concentrated in certain neighborhoods, authorities can prioritize protection for those areas by enforcing stricter zoning laws or limiting new Airbnb listings to prevent displacement of local residents.
+
+Also, by analyzing data on professional hosts—those who own multiple properties or run their rentals like a business—it becomes possible to assess how much of the Airbnb market is commercialized versus casual or occasional hosts. Knowing the scale of professional hosting helps policymakers understand the degree of this impact and identify where housing supply is most affected. By studying the operational behavior of professional hosts, cities can estimate the economic benefits generated through tourism and short-term rentals, such as tax revenue. Barcelona can use this information to design a fair taxation system for short-term rentals, ensuring that professional hosts contribute appropriately to the city’s economy while also funding programs to mitigate housing issues. Tax revenue from professional hosts can be funneled back into housing or public services, helping alleviate some of the negative externalities, such as rising costs of living and gentrification.
+
+
+# References 
+
+Abrate, G., Sainaghi, R., & Mauri, A. G. (2021a). Dynamic pricing in Airbnb: Individual versus professional hosts. Journal of Business Research, 141, 191–199. https://doi.org/10.1016/j.jbusres.2021.12.012
+
+Abrate, G., Sainaghi, R., & Mauri, A. G. (2021b). Dynamic pricing in Airbnb: Individual versus professional hosts. Journal of Business Research, 141, 191–199. https://doi.org/10.1016/j.jbusres.2021.12.012
+
+Barron, K., Kung, E., & Proserpio, D. (2020). The Effect of Home-Sharing on House Prices and Rents: Evidence from Airbnb. Marketing Science, 40(1), 23–47. https://doi.org/10.1287/mksc.2020.1227
+
+Chang, C., & Li, S. (2020). Study of Price Determinants of Sharing Economy-Based Accommodation Services: Evidence from Airbnb.com. Journal of Theoretical and Applied Electronic Commerce Research, 16(4), 584–601. https://doi.org/10.3390/jtaer16040035
+
+Chen, W., Wei, Z., & Xie, K. (2022). The Battle for Homes: How does home sharing disrupt local residential markets? Management Science, 68(12), 8589–8612. https://doi.org/10.1287/mnsc.2022.4299
+
+Dann, T. T. F. H. D. (2017). PRICE DETERMINANTS ON AIRBNB: HOW REPUTATION PAYS OFF IN THE SHARING ECONOMY. https://addletonacademicpublishers.com/contents-jgme/1083-volume-5-4-2017/3067-price-determinants-on-airbnb-how-reputation-pays-off-in-the-sharing-economy
+
+Deboosere, R., Kerrigan, D. J., Wachsmuth, D., & El-Geneidy, A. (2019). Location, location and professionalization: a multilevel hedonic analysis of Airbnb listing prices and revenue. Regional Studies Regional Science, 6(1), 143–156. https://doi.org/10.1080/21681376.2019.1592699
+
+Garcia-López, M., Jofre-Monseny, J., Martínez-Mazza, R., & Segú, M. (2020). Do short-term rental platforms affect housing markets? Evidence from Airbnb in Barcelona. Journal of Urban Economics, 119, 103278. https://doi.org/10.1016/j.jue.2020.103278
+
+Garz, M., & Schneider, A. (2023). Taxation of short-term rentals: Evidence from the introduction of the “Airbnb tax” in Norway. Economics Letters, 226, 111120. https://doi.org/10.1016/j.econlet.2023.111120
+
+Hidalgo, A., Riccaboni, M., & Velázquez, F. J. (2024). The effect of short‐term rentals on local consumption amenities: Evidence from Madrid. Journal of Regional Science, 64(3), 621–648. https://doi.org/10.1111/jors.12685
+
+Jiang, Haomin. (2023). “Airbnb Barcelona Dataset.” Accessed October 18, 2024. https://www.kaggle.com/datasets/haominjiang/airbnb-barcelona-dataset.
+
+Miguel, C., Braje, I. N., Drotarova, M. H., Dumančić, K., Kirkulak-Uludag, B., & Giglio, C. (2024). The effects of the professionalization of hosting on service quality: Towards quality standards and certifications within the short-term rental market. International Journal of Hospitality Management, 122, 103796. https://doi.org/10.1016/j.ijhm.2024.103796
+
+What’s required to be a Superhost - Airbnb Help Centre. (n.d.). Airbnb. https://www.airbnb.com/help/article/829#:~:text=Requirements%20to%20be%20a%20Superhost,-To%20be%20a&text=Hosted%20at%20least%2010%20reservations,Events%20or%20other%20valid%20reasons
